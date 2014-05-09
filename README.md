@@ -4,6 +4,7 @@ MITIE-Dot-Net
 A Nice .NET Wrapper for the MITIE Information Extraction Library
 
 The original project is here: https://github.com/mit-nlp/MITIE
+
 Model files can be found here: http://sourceforge.net/projects/mitie/files/binaries/
 
 # License
