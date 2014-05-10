@@ -1,7 +1,7 @@
 MITIE-Dot-Net
 =============
 
-A Nice .NET Wrapper for the MITIE Information Extraction Library
+A Nice .NET Wrapper for the MITIE Information Extraction Library (Written in F#, but fully C# compatible) 
 
 The original project is here: https://github.com/mit-nlp/MITIE
 
