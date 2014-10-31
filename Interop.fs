@@ -289,8 +289,10 @@ type MitieEngine(model: mitie_named_entity_extractor) =
     inherit MitieDisposal(model)
     override t.Finalize() = base.Finalize()
     new (filename: string) = 
+        if not <| System.IO.File.Exists filename then failwithf "File Not Found: %s" filename
         let ee = mitie_load_named_entity_extractor <| filename.ToCharArray()
-        MitieEngine(ee)
+        if ee = IntPtr.Zero then failwith "Model could not be loaded"
+        new MitieEngine(ee)
 
     member t.GetModelTags() = 
         let maxTags = mitie_get_num_possible_ner_tags(model)
@@ -306,7 +308,6 @@ type MitieEngine(model: mitie_named_entity_extractor) =
                 let offset = d.GetDetectionPos(i)
                 let len = d.GetDetectionLen(i)
                 let tag = d.GetDetectionTagStr(i)
-                printfn "%i - %i" offset len
                 yield { TokenOffset = offset; NumTokens = len; EntityTag = tag; Text = nettokens.[int offset .. int (offset + len - 1UL)]}
         |]
 
