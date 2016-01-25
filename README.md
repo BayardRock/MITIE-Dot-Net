@@ -7,6 +7,8 @@ The original project is here: https://github.com/mit-nlp/MITIE
 
 Model files can be found here: http://sourceforge.net/projects/mitie/files/binaries/
 
+Note: The included mitie.dll is compiled with AVX, SSE2 and SSE4 enabled. However, should your processor not support those instruction sets you can easily grab MITIE and compile it from the instructions given on their github page.
+
 # License
 
 MITIE is licensed under the Boost Software License - Version 1.0 - August 17th, 2003.  
