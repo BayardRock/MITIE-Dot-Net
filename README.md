@@ -1,13 +1,17 @@
 MITIE-Dot-Net
 =============
 
-A Nice .NET Wrapper for the MITIE Information Extraction Library (Written in F#, but fully C# compatible) 
+A Nice .NET Wrapper for the MITIE Information Extraction Library (Written in F#, but fully C# compatible)
 
 The original project is here: https://github.com/mit-nlp/MITIE
 
 Model files can be found here: http://sourceforge.net/projects/mitie/files/binaries/
 
 Note: The included mitie.dll is compiled with AVX, SSE2 and SSE4 enabled. However, should your processor not support those instruction sets you can easily grab MITIE and compile it from the instructions given on their github page.
+
+# Common Issues
+
+Getting a BadImageFormat exception on load? Make sure you're building in 64-bit mode.
 
 # License
 
