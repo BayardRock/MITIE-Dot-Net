@@ -1,7 +1,10 @@
 MITIE-Dot-Net
 =============
 
-A Nice .NET Wrapper for the MITIE Information Extraction Library (Written in F#, but fully C# compatible)
+A Nice .NET Wrapper for the MITIE Information Extraction Library 0.4 (Written in F#, but fully C# compatible):
+- Supports Name Entity Extraction API
+- Supports Binary Relations Detection API
+- Currently the training API is not supported.
 
 The original project is here: https://github.com/mit-nlp/MITIE
 
@@ -9,9 +12,11 @@ Model files can be found here: http://sourceforge.net/projects/mitie/files/binar
 
 Note: The included mitie.dll is compiled with AVX, SSE2 and SSE4 enabled. However, should your processor not support those instruction sets you can easily grab MITIE and compile it from the instructions given on their github page.
 
+See the included script.fsx file for usage.
+
 # Common Issues
 
-- BadImageFormat exception on load: Make sure you're building in 64-bit mode.
+- BadImageFormat exception on load: Make sure you're building/running in 64-bit mode. For F# interactive this option can be found in Tools->Options->F# Tools->F# Interactive.
 
 - "Binary Relation Detector could not be loaded" when you try to open a binary relations model: Try to open it again, I'm not sure why but this seems to randomly fail.
 
