@@ -12,7 +12,7 @@ Model files can be found here: http://sourceforge.net/projects/mitie/files/binar
 
 Note: The included mitie.dll is compiled with AVX, SSE2 and SSE4 enabled. However, should your processor not support those instruction sets you can easily grab MITIE and compile it from the instructions given on their github page.
 
-See the included script.fsx file for usage.
+See the included Sample.fsx file for usage.
 
 # Common Issues
 
