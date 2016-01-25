@@ -11,7 +11,9 @@ open Microsoft.FSharp.NativeInterop
 
 module internal Native =
     type mitie_named_entity_extractor = IntPtr
+    type mitie_binary_relation_detector = IntPtr
     type mitie_named_entity_detections = IntPtr
+    type mitie_binary_relation = IntPtr
     type tokens = nativeptr<nativeptr<char>>
 
     //    MITIE_EXPORT void mitie_free (
@@ -232,6 +234,103 @@ module internal Native =
     [<DllImport("mitie.dll", EntryPoint="mitie_ner_get_detection_tagstr")>]
     extern char* mitie_ner_get_detection_tagstr(mitie_named_entity_detections, uint64)
 
+    //    MITIE_EXPORT mitie_binary_relation_detector* mitie_load_binary_relation_detector (
+    //        const char* filename
+    //    );
+    //    /*!
+    //        requires
+    //            - filename == a valid pointer to a NULL terminated C string
+    //        ensures
+    //            - Reads a saved MITIE binary relation detector object from disk and returns a
+    //              pointer to the relation detector.
+    //            - The returned object MUST BE FREED by a call to mitie_free().
+    //            - If the object can't be created then this function returns NULL.
+    //    !*/
+    [<DllImport("mitie.dll", EntryPoint="mitie_load_binary_relation_detector")>]
+    extern mitie_binary_relation_detector mitie_load_binary_relation_detector(char[] filename)
+
+    //    MITIE_EXPORT const char* mitie_binary_relation_detector_name_string (
+    //        const mitie_binary_relation_detector* detector
+    //    );
+    //    /*!
+    //        requires
+    //            - detector != NULL
+    //        ensures
+    //            - returns a null terminated C string that identifies which relation type this
+    //              detector is designed to detect.
+    //            - The returned pointer is valid until mitie_free(detector) is called.
+    //    !*/
+    [<DllImport("mitie.dll", EntryPoint="mitie_binary_relation_detector_name_string")>]
+    extern string mitie_binary_relation_detector_name_string(mitie_binary_relation_detector detector)
+
+    //        MITIE_EXPORT mitie_binary_relation* mitie_extract_binary_relation (
+    //        const mitie_named_entity_extractor* ner,
+    //        char** tokens,
+    //        unsigned long arg1_start,
+    //        unsigned long arg1_length,
+    //        unsigned long arg2_start,
+    //        unsigned long arg2_length
+    //    );
+    //    /*!
+    //        requires
+    //            - ner != NULL
+    //            - tokens == An array of NULL terminated C strings.  The end of the array must
+    //              be indicated by a NULL value (i.e. exactly how mitie_tokenize() defines an
+    //              array of tokens).  
+    //            - arg1_length > 0
+    //            - arg2_length > 0
+    //            - The arg indices reference valid elements of the tokens array.  That is,
+    //              the following expressions evaluate to valid C-strings:
+    //                - tokens[arg1_start]
+    //                - tokens[arg1_start+arg1_length-1]
+    //                - tokens[arg2_start]
+    //                - tokens[arg2_start+arg1_length-1]
+    //            - mitie_entities_overlap(arg1_start,arg1_length,arg2_start,arg2_length) == 0
+    //        ensures
+    //            - This function converts a raw relation mention pair into an object that you
+    //              can feed into a binary relation detector for classification.  In particular,
+    //              you can pass the output of this function to mitie_classify_binary_relation()
+    //              and it will tell you if the pair of relations indicated by
+    //              arg1_start/arg1_length and arg2_start/arg2_length are an instance of a valid
+    //              binary relation within tokens.
+    //            - Each binary relation is a relation between two entities.  The arg index
+    //              ranges indicate which part of tokens comprises each of the two entities.  For
+    //              example, if you have the "PERSON born_in PLACE" relation then the arg1 index
+    //              range indicates the location of the PERSON entity and the arg2 indices
+    //              indicate the PLACE entity.  In particular, the PERSON entity would be
+    //              composed of the tokens tokens[arg1_start] through
+    //              tokens[arg1_start+arg1_length-1] and similarly for the PLACE entity.
+    //            - The returned object MUST BE FREED by a call to mitie_free().
+    //            - returns NULL if the object could not be created.
+    //    !*/
+    [<DllImport("mitie.dll", EntryPoint="mitie_extract_binary_relation")>]
+    extern mitie_binary_relation mitie_extract_binary_relation(mitie_named_entity_extractor ner, tokens tokens, uint64 arg1_start, uint64 arg1_length, uint64 arg2_start, uint64 arg2_length)
+
+    //    MITIE_EXPORT int mitie_classify_binary_relation (
+    //        const mitie_binary_relation_detector* detector,
+    //        const mitie_binary_relation* relation,
+    //        double* score
+    //    );
+    //    /*!
+    //        requires
+    //            - detector != NULL
+    //            - relation != NULL
+    //            - score != NULL
+    //        ensures
+    //            - returns 0 upon success and a non-zero value on failure.  Failure happens if
+    //              the detector is incompatible with the ner object used to extract the
+    //              relation.
+    //            - if (this function returns 0) then
+    //                - *score == the confidence that the given relation is an instance of the
+    //                  type of binary relation identified by the given detector.  In particular,
+    //                  if *score > 0 then the detector is predicting that the relation is a
+    //                  valid instance of the relation and if *score <= 0 then it is predicting
+    //                  that it is NOT a valid instance.  Moreover, the larger *score the more
+    //                  confident it is that the relation is a valid relation.
+    //    !*/
+    [<DllImport("mitie.dll", EntryPoint="mitie_classify_binary_relation")>]
+    extern int mitie_classify_binary_relation(mitie_binary_relation_detector detector, mitie_binary_relation relation, double* score)
+
 open Native
 
 type MitieDisposal(thing: IntPtr) =
@@ -250,25 +349,39 @@ type MitieDisposal(thing: IntPtr) =
             GC.SuppressFinalize(t)
     override t.Finalize () = t.Dispose(false)
 
+type MitieTokens(ntokens: tokens) =
+    inherit MitieDisposal(ntokens |> NativePtr.toNativeInt)
+    override t.Finalize() = base.Finalize()
+
+    member internal t.GetNativeTokens () = ntokens
+    member t.GetManagedTokens () =
+        [|
+            let rec walkTokens idx = 
+                seq {
+                    match NativePtr.get ntokens idx |> NativePtr.toNativeInt with
+                    | 0n -> ()
+                    | strptr -> 
+                        yield Marshal.PtrToStringAnsi(strptr)
+                        yield! walkTokens (idx + 1)
+                }
+            yield! walkTokens 0
+        |]
+
+
+type MitieResult = 
+    {
+        /// The offset of the first token in the result
+        TokenOffset: uint64
+        /// The number of tokens in the result (consecutive)
+        NumTokens: uint64
+        /// The detected type of the named entity
+        EntityTag: string
+        /// Token Text
+        Text: string []
+    }
+    override t.ToString () = t.Text |> Array.reduce (fun l r -> l + " " + r) 
+
 module internal Helpers =
-
-    type MitieTokens(ntokens: tokens) =
-        inherit MitieDisposal(ntokens |> NativePtr.toNativeInt)
-        override t.Finalize() = base.Finalize()
-
-        member internal t.GetNativeTokens () = ntokens
-        member t.GetManagedTokens () =
-            [|
-                let rec walkTokens idx = 
-                    seq {
-                        match NativePtr.get ntokens idx |> NativePtr.toNativeInt with
-                        | 0n -> ()
-                        | strptr -> 
-                            yield Marshal.PtrToStringAnsi(strptr)
-                            yield! walkTokens (idx + 1)
-                    }
-                yield! walkTokens 0
-            |]
 
     let getTokens text = 
         let ntokens = mitie_tokenize(text)
@@ -291,23 +404,22 @@ module internal Helpers =
             let str = NativePtr.toNativeInt <| mitie_ner_get_detection_tagstr(detections, idx)
             Marshal.PtrToStringAnsi(str)
 
+    type MitieBinaryRelation(relation: mitie_binary_relation) =
+        inherit MitieDisposal(relation)
+        override t.Finalize() = base.Finalize()
+    
+        member internal t.GetNativeRelation() = relation
+
     let getEntities engine ntokens =
         let entities = mitie_extract_entities(engine, ntokens)
         new MitieEntityDetections(entities)
 
-open Helpers
+    let getRelation(ner: mitie_named_entity_extractor, tokens: tokens, first: MitieResult, second: MitieResult) =
+        let relation = mitie_extract_binary_relation(ner, tokens, first.TokenOffset, first.NumTokens, second.TokenOffset, second.NumTokens)
+        if relation = IntPtr.Zero then failwith "Unable to allocate binary relation object."
+        new MitieBinaryRelation(relation)
 
-type MitieResult = 
-    {
-        /// The offset of the first token in the result
-        TokenOffset: uint64
-        /// The number of tokens in the result (consecutive)
-        NumTokens: uint64
-        /// The detected type of the named entity
-        EntityTag: string
-        /// Token Text
-        Text: string []
-    }
+open Helpers
 
 type MitieEngine(model: mitie_named_entity_extractor) =  
     inherit MitieDisposal(model)
@@ -318,12 +430,15 @@ type MitieEngine(model: mitie_named_entity_extractor) =
         if ee = IntPtr.Zero then failwith "Model could not be loaded"
         new MitieEngine(ee)
 
+    member internal t.GetNativeEngine() = model
+        
     member t.GetModelTags() = 
         let maxTags = mitie_get_num_possible_ner_tags(model)
         [| for i = 0UL to maxTags - 1UL do yield getModelTagString model i |]
 
-    member t.ExtractEntities (text: string) = 
-        use mitietokens = getTokens text
+    member t.ExtractTokens (text: string) = getTokens text
+
+    member t.ExtractEntities (mitietokens: MitieTokens) = 
         use d = getEntities model (mitietokens.GetNativeTokens())
         let numdetections = d.GetNumDetections()
         let nettokens = mitietokens.GetManagedTokens()
@@ -335,4 +450,23 @@ type MitieEngine(model: mitie_named_entity_extractor) =
                 yield { TokenOffset = offset; NumTokens = len; EntityTag = tag; Text = nettokens.[int offset .. int (offset + len - 1UL)]}
         |]
 
- 
+type MitieBinaryRelationDetector (detector: mitie_binary_relation_detector) = 
+    inherit MitieDisposal(detector)
+    let name = mitie_binary_relation_detector_name_string(detector)
+
+    override t.Finalize() = base.Finalize()
+
+    new (filename: string) = 
+        if not <| System.IO.File.Exists filename then failwithf "File Not Found: %s" filename
+        let ee = mitie_load_binary_relation_detector (filename.ToCharArray())
+        if ee = IntPtr.Zero then failwith "Binary Relation Detector could not be loaded"
+        new MitieBinaryRelationDetector(ee)
+
+    member t.Name = name
+
+    member t.ExtractBinaryRelation(ner: MitieEngine, tokens: MitieTokens, first: MitieResult, second: MitieResult) =
+        use relation = getRelation(ner.GetNativeEngine(), tokens.GetNativeTokens(), first, second)        
+        let mutable score : nativeptr<double> = NativePtr.stackalloc 1
+        let cls_result = mitie_classify_binary_relation(detector, relation.GetNativeRelation(), score)
+        if cls_result <> 0 then failwithf "An incompatible NER object was used with the relation detector: %i" cls_result
+        NativePtr.read score

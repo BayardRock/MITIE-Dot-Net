@@ -11,7 +11,9 @@ Note: The included mitie.dll is compiled with AVX, SSE2 and SSE4 enabled. Howeve
 
 # Common Issues
 
-Getting a BadImageFormat exception on load? Make sure you're building in 64-bit mode.
+- BadImageFormat exception on load: Make sure you're building in 64-bit mode.
+
+- "Binary Relation Detector could not be loaded" when you try to open a binary relations model: Try to open it again, I'm not sure why but this seems to randomly fail.
 
 # License
 
